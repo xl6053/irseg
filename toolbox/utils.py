@@ -190,15 +190,60 @@ def tensor_classes_to_RGBs(label, N, cmap=None):
         return torch.from_numpy(colored[np.newaxis, ...])
 
 
-def save_ckpt(logdir, model, epoch_iter, prefix=''):
-    state = model.module.state_dict() if hasattr(model, 'module') else model.state_dict()
-    torch.save(state, os.path.join(logdir, prefix + 'model_' + str(epoch_iter) + '.pth'))
 
+def save_ckpt(logdir, checkpoint, epoch):
+    """
+    一个更健壮的保存函数，可以直接保存我们构建的 checkpoint 字典。
+    """
+    # 我们不再需要在这里获取 state_dict，因为 checkpoint 字典已经包含了所有信息
+    # 我们只需要将这个完整的字典保存下来即可
+    
+    # 构建保存路径
+    save_name = f'best_miou_{epoch}.pth' # 您可以根据需要修改命名规则
+    save_path = os.path.join(logdir, save_name)
 
-def load_ckpt(logdir, model, prefix=''):
-    save_pth = os.path.join(logdir, prefix+'model.pth')
-    model.load_state_dict(torch.load(save_pth))
-    return model
+    # 直接保存字典
+    torch.save(checkpoint, save_path)
+    print(f"Checkpoint saved successfully at: {save_path}")
+
+def load_ckpt(model, optimizer, scaler, checkpoint_path):
+    """
+    一个更健芳的加载函数，可以从 checkpoint 字典中恢复所有状态。
+    """
+    start_epoch = 0
+    best_metric = 0 # best_test or best_miou
+
+    if os.path.isfile(checkpoint_path):
+        print(f"Loading checkpoint '{checkpoint_path}'")
+        checkpoint = torch.load(checkpoint_path, map_location='cpu') # 先加载到CPU
+        
+        start_epoch = checkpoint.get('epoch', 0)
+        best_metric = checkpoint.get('best_test', checkpoint.get('best_miou', 0))
+
+        # 加载模型状态 (处理多GPU和单GPU情况)
+        model_state = checkpoint['model_state_dict']
+        if hasattr(model, 'module') and not hasattr(model_state, 'module'):
+            model.module.load_state_dict(model_state)
+        else:
+            model.load_state_dict(model_state)
+
+        # 加载优化器状态
+        if 'optimizer_state_dict' in checkpoint and optimizer is not None:
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
+        # 加载 AMP GradScaler 状态
+        if 'scaler_state_dict' in checkpoint and scaler is not None:
+             scaler.load_state_dict(checkpoint['scaler_state_dict'])
+
+        print(f"Loaded checkpoint '{checkpoint_path}' (epoch {start_epoch})")
+        return start_epoch, best_metric
+    else:
+        print(f"No checkpoint found at '{checkpoint_path}'")
+        return start_epoch, best_metric
+
+# --- 修改 END ---
+
+# ... (您文件中的其他函数保持不变) ...
 
 
 def compute_speed(model, input_size, device=0, iteration=100):
