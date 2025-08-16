@@ -177,6 +177,25 @@ def run(args):
             save_ckpt(logdir, checkpoint, ep + 1)
             logger.info(
                 f'Save Iter = [{ep + 1:3d}],  mPA={test_macc:.3f}, miou={test_miou:.3f}, avg={test_avg:.3f}')
+           save_interval = 10 
+
+        if (ep + 1) % save_interval == 0:
+            
+            # 3. 创建与“最佳模型”相同的 checkpoint 字典
+            checkpoint = {
+                'epoch': ep + 1,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'scaler_state_dict': scaler.state_dict(),
+                'best_test': best_test, # 保存当前的最佳分数
+            }
+            
+            # 4. 直接调用 torch.save 保存，并使用带轮次数的独立文件名
+            #    这样可以避免覆盖掉您的最佳模型文件
+            periodic_ckpt_path = os.path.join(logdir, f'checkpoint_epoch_{ep + 1}.pth')
+            torch.save(checkpoint, periodic_ckpt_path)
+            logger.info(f'--- Saved periodic checkpoint at epoch {ep + 1} to {periodic_ckpt_path} ---')
+        # --- 新增 END ---
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="config")
