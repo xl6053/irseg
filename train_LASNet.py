@@ -114,7 +114,8 @@ def run(args):
             logger.info(f"Loaded checkpoint '{args.resume}' (epoch {start_epoch})")
         else:
             logger.info(f"No checkpoint found at '{args.resume}'")
-
+    
+    save_interval = 10
     for ep in range(start_epoch, cfg['epochs']):
         model.train()
         train_loss_meter.reset()
@@ -177,7 +178,7 @@ def run(args):
             save_ckpt(logdir, checkpoint, ep + 1)
             logger.info(
                 f'Save Iter = [{ep + 1:3d}],  mPA={test_macc:.3f}, miou={test_miou:.3f}, avg={test_avg:.3f}')
-           save_interval = 10 
+         
 
         if (ep + 1) % save_interval == 0:
             
