@@ -104,7 +104,7 @@ def run(args):
     if args.resume:
         if os.path.isfile(args.resume):
             logger.info(f"Loading checkpoint '{args.resume}'")
-            checkpoint = torch.load(args.resume, map_location=device)
+            checkpoint = torch.load(args.resume, map_location=device,weights_only=False)
             start_epoch = checkpoint.get('epoch', 0)
             best_test = checkpoint.get('best_test', 0)
             model.load_state_dict(checkpoint['model_state_dict'])
